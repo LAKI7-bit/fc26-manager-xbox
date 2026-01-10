@@ -225,7 +225,7 @@ jobs:
 
           # Create the .appxupload bundle for Store submission
           $uploadPath = Join-Path $PWD "FC26ManagerXbox.appxupload"
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "." /p "$uploadPath" /contentType application /l
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "." /p "$uploadPath" /l
           if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack for upload failed" }
 
           # Move to artifacts folder for upload
