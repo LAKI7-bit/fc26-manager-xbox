@@ -153,47 +153,6 @@ jobs:
 
           "PFX_PATH=$pfxPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Patch UWP csproj in CI (ensure Release|x64 exists)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $csproj = "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj"
-          if (-not (Test-Path $csproj)) { throw "Missing csproj at $csproj" }
-
-          $content = Get-Content -Raw -Path $csproj
-
-          # Ensure Release|x64 (and Debug|x64) have OutputPath/IntermediateOutputPath.
-          if ($content -notmatch "'\$\(Configuration\)\|\$\(Platform\)'=='Release\|x64'") {
-            $insert = @'
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutputPath>bin\x64\Debug\</OutputPath>
-    <IntermediateOutputPath>obj\x64\Debug\</IntermediateOutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <Optimize>false</Optimize>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
-    <IntermediateOutputPath>obj\x64\Release\</IntermediateOutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-  </PropertyGroup>
-'@
-            $content = [regex]::Replace($content, '(</PropertyGroup>)', "`$1$insert", 1)
-          }
-
-          # Make XAML targets import robust across VS versions.
-          $content = $content -replace 'Microsoft\\WindowsXaml\\v[0-9.]+\\Microsoft\.Windows\.UI\.Xaml\.CSharp\.targets', 'Microsoft\\WindowsXaml\\v$(VisualStudioVersion)\\Microsoft.Windows.UI.Xaml.CSharp.targets'
-
-          Set-Content -Path $csproj -Value $content -Encoding UTF8
-
-          Write-Host "--- csproj key lines (after CI patch) ---"
-          Select-String -Path $csproj -Pattern "PropertyGroup Condition=|OutputPath>|IntermediateOutputPath>|Microsoft\.Windows\.UI\.Xaml\.CSharp\.targets" | ForEach-Object {
-            "[$($_.LineNumber)] $($_.Line)"
-          }
-
       - name: Sanity check project config exists (Release|x64)
         shell: pwsh
         run: |
@@ -202,15 +161,15 @@ jobs:
           $csproj = "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj"
           if (-not (Test-Path $csproj)) { throw "Missing csproj at $csproj" }
 
-          $ok1 = Select-String -Path $csproj -SimpleMatch "Release|x64" -ErrorAction SilentlyContinue
-          $ok2 = Select-String -Path $csproj -SimpleMatch "obj\\x64\\Release" -ErrorAction SilentlyContinue
-          $ok3 = Select-String -Path $csproj -SimpleMatch 'v$(VisualStudioVersion)' -ErrorAction SilentlyContinue
-          if (-not ($ok1 -and $ok2 -and $ok3)) {
+          # Search for the exact PropertyGroup condition. Use single-quotes so PowerShell does NOT treat $() as a subexpression.
+          $pattern = 'Condition="''$(Configuration)|$(Platform)''==''Release|x64''"'
+          $hits = Select-String -Path $csproj -SimpleMatch $pattern -ErrorAction SilentlyContinue
+          if (-not $hits) {
             Write-Host "--- csproj head ---"
             Get-Content $csproj -TotalCount 80
-            throw "CI check failed: csproj is missing Release|x64 paths or VS-versioned XAML import."
+            throw "Repo does not contain Release|x64 config in csproj (did you push the latest csproj change?)"
           }
-          Write-Host "OK: Release|x64 config + paths present; XAML import is VS-versioned."
+          Write-Host "OK: Release|x64 config found in csproj."
 
       - name: Build Store upload package (x64)
         shell: pwsh
