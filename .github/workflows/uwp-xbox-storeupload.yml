@@ -185,7 +185,8 @@ jobs:
           # Restore NuGet/packages then Publish to generate StoreUpload package (.appxupload/.msixupload)
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
 
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
+          # Try publishing the solution first (different restore/publish flow on runner)
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox.sln" `
             /t:Publish `
             /p:Configuration=Release `
             /p:Platform=x64 `
