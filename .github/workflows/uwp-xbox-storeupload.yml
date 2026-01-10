@@ -193,6 +193,7 @@ jobs:
             /p:AppxBundlePlatforms=x64 `
             /p:AppxPackageSigningEnabled=true `
             /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:RuntimeIdentifiers=win10 `
             /p:PackageCertificateKeyFile="$pfxPath" `
             /p:PackageCertificatePassword="$pfxPassword" `
             /p:GenerateAppxPackageOnBuild=true `
