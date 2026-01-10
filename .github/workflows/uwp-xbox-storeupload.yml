@@ -182,7 +182,9 @@ jobs:
 
           $pfxPassword = "${{ secrets.PFX_PASSWORD }}"
 
-          # Use Publish target on the project to generate StoreUpload package (.appxupload/.msixupload)
+          # Restore NuGet/packages then Publish to generate StoreUpload package (.appxupload/.msixupload)
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
+
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
             /t:Publish `
             /p:Configuration=Release `
