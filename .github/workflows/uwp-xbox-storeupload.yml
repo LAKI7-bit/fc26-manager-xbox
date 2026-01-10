@@ -223,10 +223,17 @@ jobs:
           & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\SignTool.exe" sign /fd SHA256 /a /f "$pfxPath" /p "$pfxPassword" "$appxPath"
           if ($LASTEXITCODE -ne 0) { throw "SignTool sign failed" }
 
-          # Create the .appxupload bundle for Store submission
+          # Create the .appxupload bundle for Store submission by packaging the signed .appx
           $uploadPath = Join-Path $PWD "FC26ManagerXbox.appxupload"
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "." /p "$uploadPath" /l
-          if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack for upload failed" }
+          $uploadDir = Join-Path $PWD "upload_temp"
+          New-Item -ItemType Directory -Force -Path $uploadDir | Out-Null
+          Copy-Item -Path "$appxPath" -Destination $uploadDir -Force
+          # Compress the upload directory into .appxupload (appxupload is a zip-like container)
+          if (Test-Path $uploadPath) { Remove-Item -Force $uploadPath }
+          Compress-Archive -Path (Join-Path $uploadDir '*') -DestinationPath $uploadPath -Force
+          if (-not (Test-Path $uploadPath)) { throw "Failed to create .appxupload via Compress-Archive" }
+          # Cleanup temp folder
+          Remove-Item -Recurse -Force $uploadDir
 
           # Move to artifacts folder for upload
           $artifactsDir = Join-Path $PWD "artifacts"
