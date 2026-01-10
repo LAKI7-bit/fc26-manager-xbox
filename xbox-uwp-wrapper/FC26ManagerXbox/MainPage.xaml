@@ -1,0 +1,21 @@
+<Page
+    x:Class="FC26ManagerXbox.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FC26ManagerXbox"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <WebView x:Name="Web"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                DefaultBackgroundColor="#0F172A" />
+
+        <Grid x:Name="Loading" Background="#AA0F172A" Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <ProgressRing IsActive="True" Width="64" Height="64" />
+                <TextBlock Text="Ładowanie…" FontSize="24" Foreground="White" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>
