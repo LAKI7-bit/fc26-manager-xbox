@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout
@@ -19,10 +19,31 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          function Test-UwpTooling {
-            $xaml = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.Windows.UI.Xaml.CSharp.targets' | Select-Object -First 1
-            $appx = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.AppXPackage.Targets' | Select-Object -First 1
-            return [pscustomobject]@{ Xaml=$xaml; Appx=$appx }
+          function Find-FirstFile([string[]]$roots, [string]$fileName) {
+            foreach ($r in $roots) {
+              if (-not $r) { continue }
+              if (Test-Path $r) {
+                $hit = Get-ChildItem -Path $r -Recurse -ErrorAction SilentlyContinue -Filter $fileName | Select-Object -First 1
+                if ($hit) { return $hit }
+              }
+            }
+            return $null
+          }
+
+          function Test-UwpTooling([string]$vsInstallPath) {
+            $roots = @(
+              "${env:ProgramFiles(x86)}\MSBuild",
+              (if ($vsInstallPath) { Join-Path $vsInstallPath 'MSBuild' } else { $null })
+            )
+
+            $xaml = Find-FirstFile -roots $roots -fileName 'Microsoft.Windows.UI.Xaml.CSharp.targets'
+            $appx = Find-FirstFile -roots $roots -fileName 'Microsoft.AppXPackage.Targets'
+
+            return [pscustomobject]@{
+              Roots = ($roots -join '; ')
+              Xaml  = $xaml
+              Appx  = $appx
+            }
           }
 
           $found = Test-UwpTooling
@@ -42,13 +63,22 @@ jobs:
           if (-not $installPath) { throw "No Visual Studio installation found on runner" }
           Write-Host "VS installPath: $installPath"
 
+          $found = Test-UwpTooling -vsInstallPath $installPath
+          Write-Host "Search roots: $($found.Roots)"
+          if ($found.Xaml -and $found.Appx) {
+            Write-Host "OK: UWP tooling already present."
+            Write-Host "  WindowsXaml: $($found.Xaml.FullName)"
+            Write-Host "  AppxPackage: $($found.Appx.FullName)"
+            exit 0
+          }
+
           $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vs_installer.exe'
           if (!(Test-Path $installer)) { throw "vs_installer.exe not found: $installer" }
 
           # Add UWP workload + a compatible Windows SDK. includeOptional helps pull XAML/Appx targets.
           & $installer modify --installPath "$installPath" --add Microsoft.VisualStudio.Workload.Universal --includeRecommended --includeOptional --passive --norestart --wait
 
-          $found2 = Test-UwpTooling
+          $found2 = Test-UwpTooling -vsInstallPath $installPath
           if (-not ($found2.Xaml -and $found2.Appx)) {
             Write-Error "Still missing UWP tooling after install. WindowsXaml/Appx targets not found."
           }
@@ -61,12 +91,35 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $xamlTargets = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.Windows.UI.Xaml.CSharp.targets' | Select-Object -First 1
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (!(Test-Path $vswhere)) { throw "vswhere.exe not found: $vswhere" }
+          $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          Write-Host "VS installPath: $installPath"
+
+          $roots = @(
+            "${env:ProgramFiles(x86)}\MSBuild",
+            (if ($installPath) { Join-Path $installPath 'MSBuild' } else { $null })
+          )
+          Write-Host "Search roots: $($roots -join '; ')"
+
+          $xamlTargets = $null
+          foreach($r in $roots){
+            if($r -and (Test-Path $r)){
+              $xamlTargets = Get-ChildItem -Path $r -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.Windows.UI.Xaml.CSharp.targets' | Select-Object -First 1
+              if($xamlTargets){ break }
+            }
+          }
           if (-not $xamlTargets) {
             Write-Error "Missing UWP/XAML targets on this runner (Microsoft.Windows.UI.Xaml.CSharp.targets)."
           }
 
-          $appxTargets = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.AppXPackage.Targets' | Select-Object -First 1
+          $appxTargets = $null
+          foreach($r in $roots){
+            if($r -and (Test-Path $r)){
+              $appxTargets = Get-ChildItem -Path $r -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.AppXPackage.Targets' | Select-Object -First 1
+              if($appxTargets){ break }
+            }
+          }
           if (-not $appxTargets) {
             Write-Error "Missing AppxPackage targets on this runner (Microsoft.AppXPackage.Targets)."
           }
