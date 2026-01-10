@@ -171,7 +171,7 @@ jobs:
           }
           Write-Host "OK: Release|x64 config found in csproj."
 
-      - name: Build Store upload package (x64)
+      -       - name: Build Store upload package (x64)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -182,20 +182,17 @@ jobs:
 
           $pfxPassword = "${{ secrets.PFX_PASSWORD }}"
 
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox.sln" `
-            /t:Build `
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
+            /t:Publish `
             /p:Configuration=Release `
             /p:Platform=x64 `
-            /p:VisualStudioVersion=17.0 `
-            /p:OutputPath=bin\\x64\\Release\\ `
-            /p:IntermediateOutputPath=obj\\x64\\Release\\ `
-            /p:GenerateAppxPackageOnBuild=true `
-            /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxBundle=Always `
             /p:AppxBundlePlatforms=x64 `
             /p:AppxPackageSigningEnabled=true `
+            /p:UapAppxPackageBuildMode=StoreUpload `
             /p:PackageCertificateKeyFile="$pfxPath" `
             /p:PackageCertificatePassword="$pfxPassword" `
+            /p:GenerateAppxPackageOnBuild=true `
             /m
 
       - name: Collect artifacts
