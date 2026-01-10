@@ -1,6 +1,4 @@
-name: UWP Xbox Store Upload
-
-run-name: Build UWP Store upload (x64)
+name: Build Xbox UWP (Store Upload)
 
 on:
   workflow_dispatch:
@@ -200,11 +198,6 @@ jobs:
           Set-Content -Path $csproj -Value $content -Encoding UTF8
           Write-Host "Patched: $csproj"
 
-          Write-Host "--- patched csproj (key lines) ---"
-          Select-String -Path $csproj -Pattern "Microsoft\.Common\.props|PropertyGroup Condition=|OutputPath>|IntermediateOutputPath>|Microsoft\.Windows\.UI\.Xaml\.CSharp\.targets" | ForEach-Object {
-            "[$($_.LineNumber)] $($_.Line)"
-          }
-
       - name: Sanity check project config exists (Release|x64)
         shell: pwsh
         run: |
@@ -215,8 +208,7 @@ jobs:
 
           $ok1 = Select-String -Path $csproj -SimpleMatch "Release|x64" -ErrorAction SilentlyContinue
           $ok2 = Select-String -Path $csproj -SimpleMatch "obj\\x64\\Release" -ErrorAction SilentlyContinue
-          # Must be literal text in the csproj (don't let PowerShell expand $() in a double-quoted string)
-          $ok3 = Select-String -Path $csproj -SimpleMatch 'v$(VisualStudioVersion)' -ErrorAction SilentlyContinue
+          $ok3 = Select-String -Path $csproj -SimpleMatch "v$(VisualStudioVersion)" -ErrorAction SilentlyContinue
           if (-not ($ok1 -and $ok2 -and $ok3)) {
             Write-Host "--- csproj (tail) ---"
             Get-Content $csproj -Tail 120
