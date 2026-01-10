@@ -182,8 +182,11 @@ jobs:
 
           $pfxPassword = "${{ secrets.PFX_PASSWORD }}"
 
-          # Restore NuGet/packages then Publish to generate StoreUpload package (.appxupload/.msixupload)
+          # Restore NuGet/packages then Build (skip Publish since it fails on .NET Framework check)
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
+
+          # Build the project (produces bin\x64\Release output)
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Build /p:Configuration=Release /p:Platform=x64
 
           # Diagnostic: dump project.assets.json so we can see which dependency requires .NET Framework
           $assets = Join-Path "$PWD" "xbox-uwp-wrapper/FC26ManagerXbox/obj/project.assets.json"
@@ -194,125 +197,52 @@ jobs:
           } else {
             Write-Host "project.assets.json not found at: $assets"
           }
-          # Try publishing the project first (project-level Publish may produce packages)
-          $projPubLog = Join-Path $PWD "msbuild_project_publish.log"
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
-            /t:Publish `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:AppxBundle=Always `
-            /p:AppxBundlePlatforms=x64 `
-            /p:AppxPackageSigningEnabled=true `
-            /p:UapAppxPackageBuildMode=StoreUpload `
-            /p:RuntimeIdentifiers=win10 `
-            /p:PackageCertificateKeyFile="$pfxPath" `
-            /p:PackageCertificatePassword="$pfxPassword" `
-            /p:GenerateAppxPackageOnBuild=true `
-            /m | Tee-Object $projPubLog
 
-          Write-Host "---- msbuild_project_publish.log (tail) ----"
-          Get-Content $projPubLog -Tail 200 | ForEach-Object { Write-Host $_ }
+          # Manually create the .appx package using MakeAppx.exe
+          $binDir = "xbox-uwp-wrapper/FC26ManagerXbox/bin/x64/Release"
+          if (-not (Test-Path $binDir)) { throw "Build output not found at $binDir" }
 
-          $projExit = $LASTEXITCODE
-          Write-Host "project Publish exit code: $projExit"
-
-          # If project publish succeeded and produced packages, skip solution publish
-          if ($projExit -eq 0) {
-            Write-Host "Project Publish succeeded; searching for package files before trying solution Publish."
-            $foundProj = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload,*.appx,*.msix,*.appxbundle
-            if ($foundProj) {
-              $foundProj | ForEach-Object { Write-Host "Found package from project publish: $($_.FullName)" }
+          $manifest = Join-Path $binDir "AppxManifest.xml"
+          if (-not (Test-Path $manifest)) {
+            # Copy manifest from source if not in bin
+            $srcManifest = "xbox-uwp-wrapper/FC26ManagerXbox/Package.appxmanifest"
+            if (Test-Path $srcManifest) {
+              Copy-Item $srcManifest -Destination $manifest
             } else {
-              Write-Host "No package files found after project Publish; continuing to solution Publish/fallback."
+              throw "AppxManifest.xml not found in build output or source"
             }
           }
 
-          # Try publishing the solution first (different restore/publish flow on runner)
-          $pubLog = Join-Path $PWD "msbuild_publish.log"
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox.sln" `
-            /t:Publish `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:AppxBundle=Always `
-            /p:AppxBundlePlatforms=x64 `
-            /p:AppxPackageSigningEnabled=true `
-            /p:UapAppxPackageBuildMode=StoreUpload `
-            /p:RuntimeIdentifiers=win10 `
-            /p:PackageCertificateKeyFile="$pfxPath" `
-            /p:PackageCertificatePassword="$pfxPassword" `
-            /p:GenerateAppxPackageOnBuild=true `
-            /m | Tee-Object $pubLog
+          $appxPath = Join-Path $PWD "FC26ManagerXbox.appx"
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "$binDir" /p "$appxPath" /l
+          if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack failed" }
 
-          $msExit = $LASTEXITCODE
-          Write-Host "msbuild exit code: $msExit"
-          Write-Host "---- msbuild_publish.log (tail) ----"
-          Get-Content $pubLog -Tail 200 | ForEach-Object { Write-Host $_ }
+          # Sign the .appx package
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\SignTool.exe" sign /fd SHA256 /a /f "$pfxPath" /p "$pfxPassword" "$appxPath"
+          if ($LASTEXITCODE -ne 0) { throw "SignTool sign failed" }
 
-          Write-Host "---- Searching for package files under project folders ----"
-          $candidates = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload,*.appx,*.msix
-          if ($candidates) {
-            $candidates | ForEach-Object { Write-Host "Found package: $($_.FullName)" }
-          } else {
-            Write-Host "No package files found under xbox-uwp-wrapper. Listing common output folders:"
-            Get-ChildItem -Path "xbox-uwp-wrapper/FC26ManagerXbox/bin" -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200 | ForEach-Object { Write-Host $_.FullName }
-          }
+          # Create the .appxupload bundle for Store submission
+          $uploadPath = Join-Path $PWD "FC26ManagerXbox.appxupload"
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "." /p "$uploadPath" /contentType application /l
+          if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack for upload failed" }
 
-          if ($msExit -ne 0) { throw "msbuild publish failed with exit code $msExit; see msbuild_publish.log" }
-
-          # If Publish didn't produce packages, run CreateAppPackage on the project (more explicit packaging target)
-          Write-Host "Attempting CreateAppPackage on project as a fallback..."
-          $capLog = Join-Path $PWD "msbuild_createapppkg.log"
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
-            /t:CreateAppPackage `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:AppxBundle=Always `
-            /p:AppxBundlePlatforms=x64 `
-            /p:AppxPackageSigningEnabled=true `
-            /p:UapAppxPackageBuildMode=StoreUpload `
-            /p:RuntimeIdentifiers=win10 `
-            /p:PackageCertificateKeyFile="$pfxPath" `
-            /p:PackageCertificatePassword="$pfxPassword" `
-            /p:GenerateAppxPackageOnBuild=true `
-            /m | Tee-Object $capLog
-
-          $capExit = $LASTEXITCODE
-          Write-Host "CreateAppPackage exit code: $capExit"
-          Get-Content $capLog -Tail 200 | ForEach-Object { Write-Host $_ }
-          if ($capExit -ne 0) { Write-Error "CreateAppPackage failed (exit $capExit). Check logs above." }
+          # Move to artifacts folder for upload
+          $artifactsDir = Join-Path $PWD "artifacts"
+          New-Item -ItemType Directory -Force -Path $artifactsDir | Out-Null
+          Move-Item "$appxPath" -Destination $artifactsDir
+          Move-Item "$uploadPath" -Destination $artifactsDir
       - name: Collect artifacts
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $PWD "artifacts"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-          # Look for a broad set of possible package outputs and AppPackages folders
-          $patterns = @('*.appxupload','*.msixupload','*.appxbundleupload','*.appxbundle','*.appx','*.msix')
-          $found = @()
-          foreach ($p in $patterns) {
-            $found += Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include $p
-          }
-
-          # Also collect any AppPackages directories (Visual Studio output)
-          $appPkgDirs = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Directory | Where-Object { $_.Name -ieq 'AppPackages' }
-          foreach ($d in $appPkgDirs) {
-            $found += Get-ChildItem -Path $d.FullName -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.appxupload','.msixupload','.appxbundle','.appx','.msix' }
-            # copy entire folder for inspection
-            $dest = Join-Path $out $d.FullName.Replace((Join-Path $PWD 'xbox-uwp-wrapper') + '\','')
-            New-Item -ItemType Directory -Force -Path $dest | Out-Null
-            Copy-Item -Path (Join-Path $d.FullName '*') -Destination $dest -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Host "Collected AppPackages folder: $($d.FullName) -> $dest"
-          }
-
+          # List collected packages
+          $found = Get-ChildItem -Path $out -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload,*.appx,*.msix
           if ($found) {
-            $found | Sort-Object FullName -Unique | ForEach-Object {
-              $target = Join-Path $out $_.Name
-              Copy-Item $_.FullName -Destination $target -Force
-              Write-Host "Collected package: $($_.FullName) -> $target"
-            }
+            $found | ForEach-Object { Write-Host "Collected package: $($_.FullName)" }
           } else {
-            Write-Error "No package files found (searched for: $($patterns -join ', ')). Check msbuild_publish.log in the job log for details."
+            Write-Error "No package files found in artifacts folder."
           }
 
       - name: Upload artifact
