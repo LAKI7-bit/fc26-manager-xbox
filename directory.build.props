@@ -2,5 +2,7 @@
   <PropertyGroup>
     <!-- Ensure NuGet/MSBuild sees win10 runtime for UWP package assets -->
     <RuntimeIdentifiers>win10;win10-x64;win10-x86</RuntimeIdentifiers>
+    <!-- Workaround: disable NuGet/MSBuild block that requires full .NET Framework packages on CI -->
+    <DisableNetCoreFrameworkBlock>true</DisableNetCoreFrameworkBlock>
   </PropertyGroup>
 </Project>
