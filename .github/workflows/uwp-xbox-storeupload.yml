@@ -184,38 +184,6 @@ jobs:
 
           # Restore NuGet/packages then Publish to generate StoreUpload package (.appxupload/.msixupload)
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
-          # Try publishing the project first (project-level Publish may produce packages)
-          $projPubLog = Join-Path $PWD "msbuild_project_publish.log"
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
-            /t:Publish `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:AppxBundle=Always `
-            /p:AppxBundlePlatforms=x64 `
-            /p:AppxPackageSigningEnabled=true `
-            /p:UapAppxPackageBuildMode=StoreUpload `
-            /p:RuntimeIdentifiers=win10 `
-            /p:PackageCertificateKeyFile="$pfxPath" `
-            /p:PackageCertificatePassword="$pfxPassword" `
-            /p:GenerateAppxPackageOnBuild=true `
-            /m | Tee-Object $projPubLog
-
-          Write-Host "---- msbuild_project_publish.log (tail) ----"
-          Get-Content $projPubLog -Tail 200 | ForEach-Object { Write-Host $_ }
-
-          $projExit = $LASTEXITCODE
-          Write-Host "project Publish exit code: $projExit"
-
-          # If project publish succeeded and produced packages, skip solution publish
-          if ($projExit -eq 0) {
-            Write-Host "Project Publish succeeded; searching for package files before trying solution Publish."
-            $foundProj = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload,*.appx,*.msix,*.appxbundle
-            if ($foundProj) {
-              $foundProj | ForEach-Object { Write-Host "Found package from project publish: $($_.FullName)" }
-            } else {
-              Write-Host "No package files found after project Publish; continuing to solution Publish/fallback."
-            }
-          }
 
           # Try publishing the solution first (different restore/publish flow on runner)
           $pubLog = Join-Path $PWD "msbuild_publish.log"
