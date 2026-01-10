@@ -161,9 +161,9 @@ jobs:
           $csproj = "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj"
           if (-not (Test-Path $csproj)) { throw "Missing csproj at $csproj" }
 
-          # NOTE: Do NOT search for "$(Configuration)" literally here: PowerShell treats "$ ( ... )" as a subexpression in double-quotes.
-          # Searching for the effective config token is enough to prove the pushed csproj contains the needed config.
-          $hits = Select-String -Path $csproj -SimpleMatch "Release|x64" -ErrorAction SilentlyContinue
+          # Search for the exact PropertyGroup condition. Use single-quotes so PowerShell does NOT treat $() as a subexpression.
+          $pattern = 'Condition="''$(Configuration)|$(Platform)''==''Release|x64''"'
+          $hits = Select-String -Path $csproj -SimpleMatch $pattern -ErrorAction SilentlyContinue
           if (-not $hits) {
             Write-Host "--- csproj head ---"
             Get-Content $csproj -TotalCount 80
