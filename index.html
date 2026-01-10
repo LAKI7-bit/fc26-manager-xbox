@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FC26 Manager</title>
+    <!-- Favicon updated to provided logo -->
+    <link rel="icon" type="image/png" href="/icons/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EA FC MGR">
+
+    <link rel="stylesheet" href="style.css?v=20260110-07">
+</head>
+<body class="text-white min-h-screen flex flex-col items-center justify-center p-2 md:p-4">
+   <!-- AUTH SCREEN (NOWY) -->
+<div id="auth-screen" class="fixed inset-0 z-[20000] flex items-center justify-center p-4">
+    <!-- Usunięto bg-[#0f172a], teraz widać tło strony -->
+    <div class="glass-panel p-8 rounded-3xl w-full max-w-md animate-pop relative border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black italic tracking-tighter text-white mb-2">FC26 <span class="text-[#07f468]">MANAGER</span></h1>
+            <p class="text-xs text-gray-400 uppercase tracking-widest">Twoje Centrum Dowodzenia</p>
+        </div>
+        
+        <!-- Formularz Logowania -->
+        <div id="login-form">
+            <input type="email" id="auth-email" placeholder="Email" class="w-full bg-gray-900/50 border border-gray-600 p-4 rounded-xl mb-3 text-white placeholder-gray-500 focus:border-[#07f468] outline-none transition-colors">
+            <input type="password" id="auth-pass" placeholder="Hasło" class="w-full bg-gray-900/50 border border-gray-600 p-4 rounded-xl mb-4 text-white placeholder-gray-500 focus:border-[#07f468] outline-none transition-colors">
+            
+            <button onclick="window.AuthManager.login()" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 py-4 rounded-xl font-black uppercase tracking-widest mb-4 shadow-lg text-white transition-transform active:scale-95">
+                Zaloguj się
+            </button>
+            
+            <button onclick="window.AuthManager.guestLogin()" class="w-full bg-gray-700/50 hover:bg-gray-700 py-3 rounded-xl font-bold uppercase tracking-widest mb-6 text-xs text-gray-300 border border-white/10 transition-colors">
+                Graj jako Gość (Bez zapisu online)
+            </button>
+
+            <div class="flex justify-between text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                <button onclick="window.AuthManager.switchForm('register')" class="hover:text-white transition-colors border-b border-transparent hover:border-white pb-0.5">Stwórz Konto</button>
+                <button onclick="window.AuthManager.switchForm('reset')" class="hover:text-white transition-colors border-b border-transparent hover:border-white pb-0.5">Zapomniałem hasła</button>
+            </div>
+        </div>
+
+        <!-- Formularz Rejestracji (ukryty) -->
+        <div id="register-form" class="hidden">
+            <h2 class="text-xl font-bold text-white mb-6 text-center">Nowy Manager</h2>
+            <input type="email" id="reg-email" placeholder="Twój Email" class="w-full bg-gray-900/50 border border-gray-600 p-4 rounded-xl mb-3 text-white placeholder-gray-500 focus:border-blue-500 outline-none">
+            <input type="password" id="reg-pass" placeholder="Hasło (min. 6 znaków)" class="w-full bg-gray-900/50 border border-gray-600 p-4 rounded-xl mb-6 text-white placeholder-gray-500 focus:border-blue-500 outline-none">
+            
+            <button onclick="window.AuthManager.register()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase tracking-widest mb-4 shadow-lg text-white">
+                Zarejestruj się
+            </button>
+            <button onclick="window.AuthManager.switchForm('login')" class="w-full text-xs text-gray-400 uppercase font-bold hover:text-white">← Powrót do logowania</button>
+        </div>
+
+        <!-- Formularz Resetu Hasła (ukryty) -->
+        <div id="reset-form" class="hidden">
+            <h2 class="text-xl font-bold text-white mb-2 text-center">Reset Hasła</h2>
+            <p class="text-xs text-gray-400 text-center mb-6">Podaj email, wyślemy link do zmiany hasła.</p>
+            <input type="email" id="reset-email-input" placeholder="Email" class="w-full bg-gray-900/50 border border-gray-600 p-4 rounded-xl mb-6 text-white placeholder-gray-500 focus:border-yellow-500 outline-none">
+            
+            <button onclick="window.AuthManager.resetPassword()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-black uppercase tracking-widest mb-4 shadow-lg text-black">
+                Wyślij Link
+            </button>
+            <button onclick="window.AuthManager.switchForm('login')" class="w-full text-xs text-gray-400 uppercase font-bold hover:text-white">← Powrót</button>
+        </div>
+    </div>
+</div>
+    <div id="loading-screen">
+        <span class="loader mb-4"></span>
+        <h2 class="text-xl font-bold text-gray-300 tracking-widest">ŁĄCZENIE Z CHMURĄ...</h2>
+        <p class="text-xs text-gray-500 mt-2">Pobieranie Twoich statystyk</p>
+    </div>
+    
+    <div id="toast-notification">
+        <span>Zapisano w chmurze!</span>
+    </div>
+
+    <div class="bg-gradient-mesh">
+    <!-- Animowane plamy światła -->
+    <div class="blob blob-green"></div>
+    <div class="blob blob-purple"></div>
+    <div class="blob blob-blue"></div>
+</div>
+
+
+    <div id="app-container" class="w-full max-w-7xl mx-auto relative z-10 flex flex-col h-full hidden">
+
+        <!-- Top Bar -->
+    <div id="top-bar" class="grid grid-cols-3 items-center w-full mb-2 px-2 z-50 transition-all duration-300">
+    <!-- Lewa strona: Przycisk Menu -->
+    <div id="topbar-left" class="flex justify-start items-center gap-2 min-w-0">
+        <button id="sidebar-open-btn" onclick="window.Sidebar.open()" class="bg-gray-800/80 hover:bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center border border-white/10 shadow-lg transition-transform active:scale-90 shrink-0">
+            <span class="text-xl text-white">☰</span>
+        </button>
+
+        <!-- (STEP 3) Powrót do ustawień obok menu -->
+        <button id="abort-draw-btn" class="hidden bg-gray-800/80 hover:bg-gray-700 text-gray-200 font-bold w-10 h-10 md:w-auto md:px-3 rounded-full flex items-center justify-center border border-white/10 shadow-lg transition-transform active:scale-90 text-[10px] uppercase tracking-widest" onclick="window.PlayerManager.abortDraw()">
+            <span class="md:hidden">←</span>
+            <span class="hidden md:inline">← Powrót</span>
+        </button>
+    </div>
+
+    <!-- Środek: Tytuł aplikacji -->
+    <div class="flex flex-col items-center justify-center text-center leading-none min-w-0">
+        <span class="app-title text-2xl md:text-3xl font-black italic tracking-tighter text-white uppercase leading-none">FC26 <span class="text-[#07f468]">MANAGER</span></span>
+        <span class="app-subtitle text-[8px] md:text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] ml-0.5">by lakiseven</span>
+    </div>
+
+    <!-- Prawa strona: miejsce na akcje (bez mute w topbarze) -->
+    <div id="topbar-right" class="flex justify-end"></div>
+</div>
+</div>
+
+        <!-- STEP 1: PLAYERS CONFIG (NOWY WYGLĄD) -->
+<div id="step1-screen" class="glass-panel p-6 md:p-10 rounded-3xl animate-pop w-full max-w-5xl mx-auto my-auto relative">
+    <!-- Sidebar button (na ekranie startowym top bar jest schowany) -->
+    <button onclick="window.Sidebar.open()" class="absolute top-4 left-4 bg-gray-800/80 hover:bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center border border-white/10 shadow-lg transition-transform active:scale-90">
+        <span class="text-xl text-white">☰</span>
+    </button>
+
+    <!-- HERO TITLE (tylko ekran startowy) -->
+    <div class="text-center mb-4">
+        <div class="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none">
+            FC26 <span class="text-[#07f468]">MANAGER</span>
+        </div>
+        <div class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-[0.25em] mt-2">by lakiseven</div>
+    </div>
+
+    <h1 class="text-xl md:text-4xl font-black text-center mb-6 drop-shadow-sm uppercase italic tracking-tighter" style="color: #07f468;">
+        Kto Gra?
+    </h1>
+    
+    <!-- Input Fields for Teams -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <!-- Team 1 Input -->
+        <div class="team-input-box" role="button" tabindex="0" onclick="window.PlayerManager.openTeamPicker(1)" id="team1-input-box" aria-label="Wybierz graczy dla Drużyny 1">
+            <span class="team-input-label text-blue-400">Drużyna 1</span>
+            <div id="team1-display-list" class="flex flex-wrap justify-center gap-2 p-2 w-full">
+                <span class="text-gray-500 text-sm italic">Kliknij, by dodać</span>
+            </div>
+        </div>
+
+        <!-- Team 2 Input -->
+        <div class="team-input-box" role="button" tabindex="0" onclick="window.PlayerManager.openTeamPicker(2)" id="team2-input-box" aria-label="Wybierz graczy dla Drużyny 2">
+            <span class="team-input-label text-red-400">Drużyna 2</span>
+            <div id="team2-display-list" class="flex flex-wrap justify-center gap-2 p-2 w-full">
+                <span class="text-gray-500 text-sm italic">Kliknij, by dodać</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div class="grid grid-cols-3 gap-3 mb-6">
+        <button onclick="window.PlayerManager.clearTeams()" class="bg-gray-900/55 hover:bg-gray-900/70 text-gray-200 font-black py-3 rounded-2xl text-[11px] uppercase tracking-[0.22em] border border-white/10 transition-all shadow-[0_14px_30px_rgba(0,0,0,0.35)] active:scale-[0.98] flex flex-col items-center justify-center gap-1 backdrop-blur-xl">
+            <span class="text-xl">🧹</span>
+            Wyczyść
+        </button>
+        
+        <button onclick="window.PlayerManager.startDrawFlow()" class="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-500 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-[0.22em] shadow-[0_0_26px_rgba(79,70,229,0.55)] border border-white/10 transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-1">
+            <span class="text-xl">🎲</span>
+            Wylosuj
+        </button>
+        
+        <button onclick="window.PlayerManager.swapSides()" class="bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black py-3 rounded-2xl text-[11px] uppercase tracking-[0.22em] border border-white/10 transition-all shadow-[0_14px_30px_rgba(0,0,0,0.35)] active:scale-[0.98] flex flex-col items-center justify-center gap-1">
+            <span class="text-xl">⇄</span>
+            Zamień
+        </button>
+    </div>
+
+    <!-- Navigation -->
+    <button id="goto-step2-btn" class="w-full bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 hover:from-green-500 hover:via-emerald-500 hover:to-teal-500 text-white font-black py-4 px-6 rounded-2xl transition-all duration-300 shadow-[0_0_28px_rgba(16,185,129,0.45)] text-lg uppercase tracking-[0.28em] border border-white/10 active:scale-[0.985]">
+        GRAJMY MECZ!
+    </button>
+</div>
+
+        <!-- SELECTION MODAL -->
+        <div id="selection-modal" class="hidden">
+            <div class="bg-gray-900 border border-purple-500/50 p-6 rounded-2xl w-full max-w-md shadow-2xl animate-pop max-h-[80vh] flex flex-col">
+                <h2 class="text-xl font-bold text-white mb-2 text-center">Wybierz Graczy do Losowania</h2>
+                <div class="flex justify-end mb-2">
+                    <button id="select-all-btn" class="text-xs text-purple-400 hover:text-white underline" onclick="Sound.click()">Zaznacz wszystkich</button>
+                </div>
+                <div id="selection-list" class="flex-grow overflow-y-auto grid grid-cols-2 gap-2 mb-4 p-2 bg-gray-800 rounded"></div>
+                <div class="flex gap-3">
+                     <button onclick="document.getElementById('selection-modal').classList.add('hidden'); Sound.click();" class="w-1/3 bg-gray-700 py-3 rounded-xl font-bold text-sm">Anuluj</button>
+                     <button id="confirm-selection-btn" class="w-2/3 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold text-sm">Dalej</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DELETE PLAYERS MODAL -->
+        <div id="delete-players-modal" class="hidden">
+            <div class="bg-gray-900 border border-red-500/50 p-6 rounded-2xl w-full max-w-md shadow-2xl animate-pop max-h-[80vh] flex flex-col">
+                <h2 class="text-xl font-bold text-red-500 mb-2 text-center">Usuń Graczy</h2>
+                <p class="text-xs text-gray-400 text-center mb-4">Zaznacz graczy do trwałego usunięcia.</p>
+                <div id="delete-list" class="flex-grow overflow-y-auto grid grid-cols-2 gap-2 mb-4 p-2 bg-gray-800 rounded"></div>
+                <div class="flex gap-3">
+                     <button onclick="document.getElementById('delete-players-modal').classList.add('hidden'); Sound.click();" class="w-1/3 bg-gray-700 py-3 rounded-xl font-bold text-sm">Anuluj</button>
+                     <button id="confirm-delete-btn" class="w-2/3 bg-red-600 hover:bg-red-500 py-3 rounded-xl font-bold text-sm">Usuń Zaznaczonych</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMAT MODAL -->
+        <div id="format-modal" class="hidden">
+            <div class="bg-gray-900 border border-purple-500/50 p-6 rounded-2xl w-full max-w-sm text-center shadow-2xl animate-pop">
+                <h2 class="text-xl font-bold text-white mb-4 uppercase tracking-widest">Format Meczu</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.PlayerManager.executeDraw('1v1')" class="bg-gray-800 hover:bg-purple-600 border border-gray-600 py-4 rounded-xl font-black text-xl transition-all">1 v 1</button>
+                    <button onclick="window.PlayerManager.executeDraw('2v2')" class="bg-gray-800 hover:bg-purple-600 border border-gray-600 py-4 rounded-xl font-black text-xl transition-all">2 v 2</button>
+                    <button onclick="window.PlayerManager.executeDraw('1v2')" class="bg-gray-800 hover:bg-purple-600 border border-gray-600 py-4 rounded-xl font-black text-xl transition-all">1 v 2</button>
+                    <button onclick="window.PlayerManager.executeDraw('1v3')" class="bg-gray-800 hover:bg-purple-600 border border-gray-600 py-4 rounded-xl font-black text-xl transition-all">1 v 3</button>
+                </div>
+                <button onclick="document.getElementById('format-modal').classList.add('hidden'); Sound.click();" class="mt-4 text-gray-500 text-xs hover:text-white underline">Anuluj</button>
+            </div>
+        </div>
+
+        
+        <!-- CUSTOM CONFIRMATION MODAL FOR HARD RESET -->
+        <div id="confirm-reset-modal" class="hidden">
+            <div class="bg-gray-800 p-6 rounded-xl text-center border border-red-500/50 max-w-sm animate-pop">
+                <p class="text-lg font-bold text-red-400 mb-4">UWAGA: PEŁNY RESET DANYCH!</p>
+                <p class="text-sm text-gray-300 mb-6">Czy na pewno chcesz usunąć WSZYSTKIE dane (graczy, mecze, sesje)? Tej operacji NIE DA SIĘ COFNĄĆ.</p>
+                <div class="flex justify-center gap-4">
+                    <button id="confirm-reset-action" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Tak, Resetuj!</button>
+                    <button id="cancel-reset-action" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Anuluj</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MANUAL SELECTION MODAL -->
+        <div id="manual-select-modal" class="hidden">
+            <div class="bg-gray-900 border border-indigo-500/50 p-6 rounded-2xl w-full max-w-2xl shadow-2xl animate-pop text-center max-h-[90vh] overflow-y-auto flex flex-col">
+                <h2 class="text-2xl font-black text-white mb-2 uppercase tracking-widest">Wybierz Drużynę</h2>
+                <div id="manual-league-list" class="flex flex-wrap gap-2 justify-center mb-4"></div>
+                <div id="manual-team-grid" class="grid grid-cols-3 md:grid-cols-4 gap-2 overflow-y-auto flex-grow max-h-[50vh] p-2 bg-gray-800/50 rounded-lg"></div>
+                 <button onclick="document.getElementById('manual-select-modal').classList.add('hidden'); Sound.click();" class="mt-4 bg-gray-700 hover:bg-gray-600 py-3 rounded-xl font-bold text-sm">Anuluj</button>
+            </div>
+        </div>
+        
+        <!-- AVATAR EDITOR MODAL -->
+        <div id="avatar-modal" class="hidden">
+            <div class="bg-gray-900 border border-yellow-500/50 p-6 rounded-2xl w-full max-w-sm shadow-2xl animate-pop text-center">
+                <h2 class="text-xl font-bold text-yellow-400 mb-4 uppercase tracking-widest">Edytor Gracza</h2>
+                <p class="text-xs text-gray-400 mb-4">Dostosuj swój awatar. Zmiany zostaną zapisane w bazie.</p>
+                
+                <div class="flex flex-col gap-4 items-center mb-6">
+                    <div id="avatar-preview-circle" class="w-24 h-24 rounded-full flex items-center justify-center text-4xl border-4 border-white/20 shadow-lg transition-colors duration-300">
+                        😎
+                    </div>
+                    
+                    <div class="w-full">
+                         <label class="text-[10px] uppercase text-gray-500 font-bold block mb-1">Emoji (Max 1 znak)</label>
+                         <input type="text" id="avatar-emoji-input" maxlength="2" class="bg-gray-800 border border-gray-600 text-center text-2xl p-2 rounded-lg w-full text-white" placeholder="😎">
+                    </div>
+
+                    <div class="w-full">
+                         <label class="text-[10px] uppercase text-gray-500 font-bold block mb-1">Kolor Tła</label>
+                         <input type="color" id="avatar-color-input" class="w-full h-10 bg-gray-800 border border-gray-600 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('avatar-modal').classList.add('hidden'); Sound.click();" class="w-1/3 bg-gray-700 py-3 rounded-xl font-bold text-sm">Anuluj</button>
+                    <button id="save-avatar-btn" class="w-2/3 bg-yellow-600 hover:bg-yellow-500 py-3 rounded-xl font-bold text-sm text-black">Zapisz</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- EDIT MATCH MODAL -->
+        <div id="edit-match-modal" class="hidden">
+            <div class="bg-gray-900 border border-blue-500/50 p-5 md:p-8 rounded-3xl w-full max-w-5xl shadow-2xl animate-pop m-3 relative overflow-y-auto no-scrollbar max-h-[92vh] flex flex-col">
+                <button onclick="document.getElementById('edit-match-modal').classList.add('hidden'); Sound.click();" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
+                <h2 class="text-2xl font-black text-blue-400 mb-4 uppercase tracking-widest text-center">Edycja Meczu</h2>
+                <div id="edit-match-content" class="flex flex-col gap-4">
+                    <!-- Dynamic content injected here -->
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button onclick="document.getElementById('edit-match-modal').classList.add('hidden'); Sound.click();" class="w-1/3 bg-gray-700 hover:bg-gray-600 py-3 rounded-xl font-bold text-sm">Anuluj</button>
+                    <button id="save-edit-match-btn" class="w-2/3 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold text-sm uppercase tracking-wider">Zapisz Zmiany</button>
+                </div>
+            </div>
+        </div>
+
+
+          <!-- STEP 2: MATCH PARAMS -->
+              <div id="step2-screen" class="hidden glass-panel p-6 pt-16 md:p-10 rounded-3xl animate-pop w-full max-w-5xl mx-auto my-auto relative">
+                 <div class="absolute top-4 left-4">
+                <button id="back-to-step1-btn" class="bg-gray-800/80 hover:bg-gray-700 text-gray-200 font-bold px-4 py-2 rounded-xl border border-white/10 shadow-lg transition-transform active:scale-95 text-xs uppercase tracking-widest">Wróć</button>
+                 </div>
+                 <h1 class="text-3xl md:text-5xl font-black text-center mb-3 drop-shadow-sm uppercase italic tracking-tighter text-white">
+                Parametry Meczu
+             </h1>
+             <div class="flex justify-center items-center gap-4 mb-6 bg-white/5 py-2 rounded-lg">
+                 <span id="preview-team1" class="text-blue-300 font-bold uppercase text-sm text-center w-1/3 break-words"></span>
+                 <span class="text-gray-500 text-xs font-mono">VS</span>
+                 <span id="preview-team2" class="text-red-300 font-bold uppercase text-sm text-center w-1/3 break-words"></span>
+             </div>
+            
+            <div class="space-y-6">
+                <!-- Leagues -->
+                <div>
+                    <label class="block mb-3 text-xs md:text-sm font-bold text-gray-300 uppercase tracking-wider text-center">Wybierz Ligę</label>
+                    <div id="league-filters" class="flex flex-wrap gap-2 justify-center">
+                         <button data-league="All" class="league-btn active px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Wszystkie</button>
+                         <button data-league="All_NoRow" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Wszystkie (Bez R.Świat)</button>
+                         
+                         <button data-league="Clubs" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Kluby</button>
+                         <button data-league="National" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Reprezentacje</button>
+                         <button data-league="Rest of World" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Reszta Świata</button>
+                         <button data-league="Premier League" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Premier League</button>
+                         <button data-league="La Liga" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">La Liga</button>
+                         <button data-league="Bundesliga" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Bundesliga</button>
+                         <button data-league="Serie A" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Serie A</button>
+                         <button data-league="Ligue 1" class="league-btn px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs md:text-sm">Ligue 1</button>
+                    </div>
+                </div>
+
+                <!-- Sliders -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-700/50">
+                        <label class="flex justify-between mb-2 text-xs font-medium text-gray-300">
+                            <span>Min Gwiazdek</span>
+                            <span id="min-stars-value" class="text-yellow-400 font-bold">2.5</span>
+                        </label>
+                        <input id="min-stars" type="range" min="2.5" max="5" value="2.5" step="0.5" class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer">
+                    </div>
+                    <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-700/50">
+                        <label class="flex justify-between mb-2 text-xs font-medium text-gray-300">
+                            <span>Max Gwiazdek</span>
+                            <span id="max-stars-value" class="text-yellow-400 font-bold">5</span>
+                        </label>
+                        <input id="max-stars" type="range" min="2.5" max="5" value="5" step="0.5" class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Rerolls -->
+                <div class="text-center">
+                    <label class="block mb-2 w-full text-xs font-medium text-gray-300">Rerolle (Przelosowania)</label>
+                    <div class="inline-flex items-center bg-gray-800/80 rounded-full p-1 border border-gray-600">
+                        <button id="reroll-minus-btn" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center font-bold text-base transition-colors">-</button>
+                        <span id="rerolls-value" class="w-12 text-center text-xl font-bold text-white">3</span>
+                        <button id="reroll-plus-btn" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center font-bold text-base transition-colors">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 mt-8">
+                      <button id="start-drawing-btn" class="w-full bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 hover:from-green-500 hover:via-emerald-500 hover:to-teal-500 text-white font-black py-4 px-6 rounded-2xl transition-all duration-300 shadow-[0_0_28px_rgba(16,185,129,0.45)] border border-white/10 text-lg uppercase tracking-[0.28em] active:scale-[0.985]">
+                          PRZEJDŹ DO LOSOWANIA
+                      </button>
+            </div>
+           
+            <p id="session-info" class="text-center text-[10px] text-gray-500 mt-2">Drużyny użyte w sesji: 0</p>
+        </div>
+
+       <!-- STEP 3: DRAWING SCREEN (jak Parametry Meczu) -->
+        <div id="drawing-screen" class="hidden glass-panel px-3 pt-1 pb-3 md:px-6 md:pt-3 md:pb-5 rounded-3xl animate-pop w-full max-w-7xl mx-auto relative flex flex-col justify-start">
+            
+            <!-- HEADER ROW (Nazwy + H2H w jednej linii - BEZPIECZNY UKŁAD) -->
+            <!-- Używamy gap, aby wymusić odstęp od H2H -->
+            <div id="drawing-header-row" class="w-full flex flex-row items-center justify-between gap-1 md:gap-2 mt-0 mb-2 z-10 relative min-h-[64px]">
+                
+                <!-- NAME 1 (Wyrównane do LEWEJ - Początek Karty 1) -->
+                <div class="flex-1 flex justify-start items-center overflow-visible min-w-0">
+                    <div id="p1-name-display" class="w-full text-left font-black uppercase tracking-tighter drop-shadow-md leading-snug break-words whitespace-normal text-xs sm:text-sm md:text-base transition-all duration-300 pl-1"></div>
+                </div>
+
+                <!-- H2H STATS (Środek - nie da się go zasłonić) -->
+                <div class="shrink-0 flex justify-center items-center z-20">
+                     <div id="h2h-stats-display" class="flex justify-center items-center scale-90 origin-center filter drop-shadow-xl"></div>
+                </div>
+
+                <!-- NAME 2 (Wyrównane do PRAWEJ - Koniec Karty 2) -->
+                <div class="flex-1 flex justify-end items-center overflow-visible min-w-0">
+                    <div id="p2-name-display" class="w-full text-right font-black uppercase tracking-tighter drop-shadow-md leading-snug break-words whitespace-normal text-xs sm:text-sm md:text-base transition-all duration-300 pr-1"></div>
+                </div>
+            </div>
+
+            <!-- MAIN GRID (Panels) -->
+            <div id="panels-grid" class="flex flex-col md:flex-row gap-2 md:gap-4 w-full h-auto md:h-[60vh] items-stretch z-10 relative">
+                <div class="panel-wrapper order-1 md:order-1 md:basis-1/2 flex flex-col flex-1 min-w-0 gap-2 min-h-[42vh] md:min-h-0" id="wrapper-t1">
+                    <div id="team1-panel" class="fut-card-empty rounded-3xl p-3 relative transition-all duration-500 flex flex-grow flex-col items-center justify-center h-full">
+                        <div id="team1-info" class="text-center w-full z-10 flex flex-col items-center justify-center h-full">
+                            <div class="draw-placeholder w-full h-full flex items-center justify-center">
+                                <div class="draw-placeholder-card">
+                                    <div class="draw-placeholder-mark" aria-hidden="true"></div>
+                                    <div class="draw-placeholder-title">Gotowi na losowanie?</div>
+                                    <div class="draw-placeholder-sub">Kliknij <span class="font-black text-white">LOSUJ DRUŻYNY</span> lub wybierz ręcznie</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="team1-actions" class="flex flex-col md:flex-row gap-2 hidden mt-2 px-2">
+                         <button id="reroll-btn-1" class="flex-1 bg-gradient-to-br from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black py-3 rounded-2xl text-[11px] md:text-sm shadow-[0_0_22px_rgba(250,204,21,0.35)] border border-black/10 uppercase tracking-[0.22em] transition-all active:scale-[0.985]">
+                            PRZELOSUJ (<span id="rerolls-left-1"></span>)
+                        </button>
+                        <button id="keep-btn-1" class="flex-1 bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 hover:from-green-500 hover:via-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl text-[11px] md:text-sm shadow-[0_0_22px_rgba(16,185,129,0.35)] border border-white/10 uppercase tracking-[0.22em] transition-all active:scale-[0.985]">
+                            BIORĘ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="panel-wrapper order-3 md:order-2 md:basis-1/2 flex flex-col flex-1 min-w-0 gap-2 min-h-[42vh] md:min-h-0" id="wrapper-t2">
+                    <div id="team2-panel" class="fut-card-empty rounded-3xl p-3 relative transition-all duration-500 flex flex-grow flex-col items-center justify-center h-full">
+                        <div id="team2-info" class="text-center w-full z-10 flex flex-col items-center justify-center h-full">
+                            <div class="draw-placeholder w-full h-full flex items-center justify-center">
+                                <div class="draw-placeholder-card">
+                                    <div class="draw-placeholder-mark" aria-hidden="true"></div>
+                                    <div class="draw-placeholder-title">Gotowi na losowanie?</div>
+                                    <div class="draw-placeholder-sub">Kliknij <span class="font-black text-white">LOSUJ DRUŻYNY</span> lub wybierz ręcznie</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="team2-actions" class="flex flex-col md:flex-row gap-2 hidden mt-2 px-2">
+                         <button id="reroll-btn-2" class="flex-1 bg-gradient-to-br from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black py-3 rounded-2xl text-[11px] md:text-sm shadow-[0_0_22px_rgba(250,204,21,0.35)] border border-black/10 uppercase tracking-[0.22em] transition-all active:scale-[0.985]">
+                            PRZELOSUJ (<span id="rerolls-left-2"></span>)
+                        </button>
+                        <button id="keep-btn-2" class="flex-1 bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 hover:from-green-500 hover:via-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl text-[11px] md:text-sm shadow-[0_0_22px_rgba(16,185,129,0.35)] border border-white/10 uppercase tracking-[0.22em] transition-all active:scale-[0.985]">
+                            BIORĘ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div id="actions-row" class="w-full flex flex-col gap-2 mt-2 z-10 relative">
+
+                <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 px-2 items-stretch">
+                    <button id="manual-btn-1" onclick="window.ManualSelect.open(true, 1)" class="justify-self-stretch md:justify-self-center w-full md:w-auto whitespace-nowrap bg-gray-900/55 hover:bg-gray-900/70 text-gray-200 font-black px-3 py-2 md:py-3 rounded-2xl text-[10px] md:text-xs border border-white/10 shadow-[0_14px_30px_rgba(0,0,0,0.35)] uppercase tracking-[0.22em] transition-all active:scale-[0.98] backdrop-blur-xl">
+                        📝 Wybierz Ręcznie
+                    </button>
+                    <button id="draw-teams-btn" class="bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black py-3 md:py-4 px-4 rounded-2xl shadow-[0_0_25px_rgba(79,70,229,0.5)] border-t border-white/20 text-base md:text-2xl tracking-widest transition-transform hover:scale-105 active:scale-95">
+                        LOSUJ DRUŻYNY
+                    </button>
+                    <button id="manual-btn-2" onclick="window.ManualSelect.open(true, 2)" class="justify-self-stretch md:justify-self-center w-full md:w-auto whitespace-nowrap bg-gray-900/55 hover:bg-gray-900/70 text-gray-200 font-black px-3 py-2 md:py-3 rounded-2xl text-[10px] md:text-xs border border-white/10 shadow-[0_14px_30px_rgba(0,0,0,0.35)] uppercase tracking-[0.22em] transition-all active:scale-[0.98] backdrop-blur-xl">
+                        📝 Wybierz Ręcznie
+                    </button>
+                </div>
+            </div>
+            
+            <div id="results-scroll-target"></div>
+            <!-- (Sekcja Results pozostaje bez zmian) -->
+                 <div id="results-container" class="hidden mt-6 mb-4 md:mb-6 animate-pop z-20 relative">
+                <div class="glass-panel rounded-3xl p-4 md:p-8 text-center border-2 border-indigo-500/30 relative overflow-hidden">
+                    <div id="live-match-timer" class="absolute top-2 right-2 md:top-4 md:right-4 z-10 hidden">
+                        <div class="timer-display text-lg md:text-2xl font-bold tracking-widest" id="timer-text">0'</div>
+                    </div>
+                    <h3 class="text-indigo-400 text-sm font-bold uppercase tracking-widest mb-1">Symulacja Meczu</h3>
+                    <p class="text-[10px] md:text-xs text-indigo-300 mb-4 tracking-wider opacity-80">(Bramki z dystansu x2)</p>
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="flex items-center justify-center gap-4 md:gap-12">
+                             <div class="text-6xl md:text-9xl font-black text-white transition-colors duration-200" id="score-team-1">0</div>
+                             <div class="text-4xl text-gray-500 font-light">-</div>
+                             <div class="text-6xl md:text-9xl font-black text-white transition-colors duration-200" id="score-team-2">0</div>
+                        </div>
+                        <div id="match-details" class="mt-4 text-base md:text-xl font-semibold text-yellow-400 min-h-[2rem]"></div>
+                         <div id="match-events-log" class="mt-2 text-xs text-gray-400 font-mono space-y-1 max-w-md mx-auto"></div>
+                    </div>
+                    <div class="flex gap-4 justify-center mt-6">
+                        <button id="reset-btn" class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-xl font-bold border border-gray-500" onclick="Sound.click()">
+                            Zakończ / Anuluj
+                        </button>
+                        <button id="save-match-btn" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded-xl font-bold border border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]" onclick="Sound.click()">
+                            Zapisz Spotkanie
+                        </button>
+                    </div>
+                </div>
+
+                <!-- "What If" Section -->
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 opacity-90">
+                    <div class="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-700 pb-1" id="alt-header-1">Gdybyś losował dalej</p>
+                        <div id="alt-list-1" class="space-y-1 text-sm flex flex-col gap-1 max-h-40 overflow-y-auto"></div>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-700 pb-1" id="alt-header-2">Gdybyś losował dalej</p>
+                        <div id="alt-list-2" class="space-y-1 text-sm flex flex-col gap-1 max-h-40 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+    <!-- MODALS -->
+    <div id="recording-modal" class="hidden">
+        <div class="glass-panel recording-shell border border-white/10 p-4 md:p-6 rounded-3xl w-full max-w-4xl max-h-[95vh] overflow-y-auto m-2 shadow-2xl relative">
+            <button id="close-recording-x" class="recording-close absolute top-3 right-3 md:top-4 md:right-4" onclick="Sound.click()" aria-label="Zamknij">&times;</button>
+
+            <div class="recording-header">
+                <div class="recording-kicker">ZAPIS MECZU</div>
+                <h2 class="recording-title">RAPORT MECZOWY</h2>
+                <div class="recording-sub">Dodaj bramki (z metodą), sprawdź historię i zapisz wynik.</div>
+            </div>
+
+            <div class="recording-scorebar" role="group" aria-label="Wynik meczu">
+                <div class="recording-team team-1">
+                    <div class="recording-team-name" id="modal-t1-name">TEAM 1</div>
+                    <div id="calc-score-1" class="recording-score">0</div>
+                </div>
+                <div class="recording-sep">:</div>
+                <div class="recording-team team-2">
+                    <div class="recording-team-name" id="modal-t2-name">TEAM 2</div>
+                    <div id="calc-score-2" class="recording-score">0</div>
+                </div>
+            </div>
+
+            <div class="recording-actions">
+                <button onclick="window.MatchRecorder.addGoal(1)" class="recording-goal-btn goal-1" aria-label="Dodaj gola drużynie 1">
+                    <div class="goal-btn-title">+ GOL</div>
+                    <div id="add-goal-sub-1" class="goal-btn-sub">&nbsp;</div>
+                </button>
+                <button onclick="window.MatchRecorder.addGoal(2)" class="recording-goal-btn goal-2" aria-label="Dodaj gola drużynie 2">
+                    <div class="goal-btn-title">+ GOL</div>
+                    <div id="add-goal-sub-2" class="goal-btn-sub">&nbsp;</div>
+                </button>
+            </div>
+
+            <div class="recording-tools">
+                <button id="undo-last-goal-btn" class="recording-mini-btn">Cofnij ostatni gol</button>
+                <button id="toggle-history-btn" class="recording-link">Pokaż / Edytuj historię bramek</button>
+            </div>
+
+            <div id="goal-history-wrapper" class="hidden recording-history">
+                <p id="no-goals-msg" class="recording-empty">Brak goli. Dodaj zdarzenie przyciskiem "+ GOL".</p>
+                <div id="goal-details-container" class="space-y-4"></div>
+            </div>
+
+            <div class="recording-footer">
+                <button id="cancel-recording" class="recording-cancel" onclick="Sound.click()">Anuluj</button>
+                <button id="confirm-recording" class="recording-confirm">Zapisz mecz</button>
+            </div>
+
+            <!-- GOAL WIZARD OVERLAY -->
+            <div id="goal-wizard-modal" class="hidden">
+                <div class="recording-wizard">
+                    <h3 id="wizard-title" class="recording-wizard-title">Wybierz metodę</h3>
+                    <div id="wizard-buttons" class="grid grid-cols-2 gap-3"></div>
+                    <button id="wizard-cancel" class="recording-wizard-cancel">Anuluj</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="player-profile-modal" class="hidden">
+        <div class="bg-gray-900 border border-indigo-500/50 p-6 rounded-3xl w-full max-w-2xl shadow-2xl animate-pop m-4 relative overflow-y-auto no-scrollbar max-h-[90vh]">
+             <button onclick="document.getElementById('player-profile-modal').classList.add('hidden'); Sound.click();" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
+             <div id="player-profile-content"></div>
+        </div>
+    </div>
+
+    <div id="compare-modal" class="hidden">
+        <div class="bg-gray-900 border border-blue-500/50 p-6 rounded-3xl w-full max-w-3xl shadow-2xl animate-pop m-4 relative overflow-y-auto no-scrollbar max-h-[90vh]">
+             <button onclick="document.getElementById('compare-modal').classList.add('hidden'); Sound.click();" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
+             <h2 class="text-2xl font-black text-center mb-6 text-blue-400">PORÓWNYWARKA</h2>
+             
+             <!-- Toggle Switch -->
+             <div class="flex justify-center mb-4">
+                <div class="flex bg-gray-800 rounded-full p-1 border border-gray-700/60">
+                    <button id="compare-mode-players" class="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white transition-colors" onclick="Sound.click()">Gracze</button>
+                    <button id="compare-mode-duos" class="px-4 py-1.5 rounded-full text-sm font-bold text-gray-400 hover:text-white transition-colors" onclick="Sound.click()">Duety</button>
+                </div>
+             </div>
+
+             <div class="flex flex-col sm:flex-row justify-center items-center gap-2 md:gap-4 mb-2">
+                 <select id="compare-p1" class="select-pill text-sm w-full sm:w-1/3" onchange="Sound.click()"></select>
+                 <span class="text-xl font-bold pt-0 sm:pt-1">VS</span>
+                 <select id="compare-p2" class="select-pill text-sm w-full sm:w-1/3" onchange="Sound.click()"></select>
+             </div>
+                         <div class="flex justify-center mb-4">
+                             <div class="compare-segment">
+                                 <button id="run-compare-btn" class="toggle-btn inactive" onclick="Sound.click()">Porównanie statystyk</button>
+                                 <button id="run-compare-h2h-btn" class="toggle-btn inactive" onclick="Sound.click()">Porównaj H2H</button>
+                             </div>
+                         </div>
+             <div id="compare-content" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3"></div>
+             <div class="flex justify-center mb-2">
+                 <button id="toggle-h2h-history-btn" class="hidden bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-full font-bold text-gray-200 border border-gray-700/60" onclick="Sound.click()">Historia H2H</button>
+             </div>
+             <div id="compare-h2h" class="hidden mt-2 max-w-md mx-auto"></div>
+             <div id="compare-h2h-history" class="hidden mt-2 grid grid-cols-2 gap-2 max-w-md mx-auto"></div>
+        </div>
+    </div>
+
+    <div id="post-match-modal" class="hidden">
+        <div class="glass-panel postmatch-shell border border-white/10 p-7 md:p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+            <div class="postmatch-glow" aria-hidden="true"></div>
+            <h2 class="postmatch-title">Mecz zapisany</h2>
+            <p class="postmatch-sub">Co robimy dalej?</p>
+            <div class="flex flex-col gap-3 mt-6">
+                <button onclick="window.PostMatchMenu.rematch()" class="postmatch-btn primary">Rewanż (te same składy)</button>
+                <button onclick="window.PostMatchMenu.newSquads()" class="postmatch-btn">Zmieniamy składy (wybór)</button>
+                <button onclick="window.PostMatchMenu.showStats()" class="postmatch-btn success">Zobacz statystyki</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="hidden">
+        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto m-4 shadow-2xl relative">
+            <div class="stats-header flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-white">Centrum Statystyk</h2>
+                <div class="flex items-center gap-3">
+                     <!-- TOGGLE SWITCH FOR HIDING <10 MATCHES -->
+                     <label class="inline-flex items-center cursor-pointer mr-2">
+                        <input type="checkbox" id="hide-low-matches-toggle" class="sr-only peer" checked>
+                        <div class="relative w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <span class="ms-2 text-[10px] font-medium text-gray-400 uppercase leading-none">Ukryj &lt;10 meczów</span>
+                    </label>
+
+                     <button onclick="window.Stats.openCompare()" class="compare-btn">⚖️ Porównaj</button>
+                     <button id="close-stats" class="text-gray-400 hover:text-white text-2xl font-bold p-2" title="Zamknij">&times;</button>
+                </div>
+            </div>
+            <!-- KPI CARDS -->
+            <div id="stats-kpis" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4"></div>
+            
+            <div class="tabs-row flex gap-2 mb-4">
+                <button id="tab-rankings" class="stats-tab active bg-indigo-600 px-4 py-2 rounded-full text-sm font-bold" onclick="window.Stats.switchTab('rankings', this); Sound.click();">Rankingi</button>
+                <button id="tab-duos" class="stats-tab bg-gray-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700" onclick="window.Stats.switchTab('duos', this); Sound.click();">Duety</button>
+                <button id="tab-teams" class="stats-tab bg-gray-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700" onclick="window.Stats.switchTab('teams', this); Sound.click();">Zespoły</button>
+                <button id="tab-players" class="stats-tab bg-gray-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700" onclick="window.Stats.switchTab('players', this); Sound.click();">Gracze</button>
+                 <button id="tab-history" class="stats-tab bg-gray-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700" onclick="window.Stats.switchTab('history', this); Sound.click();">Historia Meczów</button>
+            </div>
+            
+            <div id="ranking-type-container" class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <label for="ranking-type-select" class="text-[11px] text-gray-400 font-bold uppercase">Typ rankingu:</label>
+                    <select id="ranking-type-select" onchange="window.Stats.renderRankings(); Sound.click();" class="select-pill w-full md:w-auto text-sm font-bold">
+                        <!-- Options populated via JS -->
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="range-select" class="text-[11px] text-gray-400 font-bold uppercase">Zakres:</label>
+                    <select id="range-select" class="select-pill text-sm font-bold">
+                        <option value="all">Całość</option>
+                        <option value="today">Dzisiaj</option>
+                        <option value="week">Ostatni tydzień</option>
+                        <option value="month">Ostatni miesiąc</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="stats-content" class="min-h-[300px]"></div>
+        </div>
+    </div>
+
+    <!-- VS OVERLAY -->
+    <div id="vs-overlay">
+        <div class="vs-stage">
+            <div id="vs-left-panel" class="vs-panel"><div class="vs-content" id="vs-content-left"></div></div>
+            <div class="vs-badge-container"><div class="vs-circle"><div class="vs-text-inner">VS</div></div></div>
+            <div id="vs-right-panel" class="vs-panel"><div class="vs-content" id="vs-content-right"></div></div>
+        </div>
+    </div>
+
+    <!-- DATA & LOGIC -->
+    <!-- GAMEPAD HUD (Xbox / Edge) -->
+    <div id="gamepad-overlay" class="hidden fixed inset-0 z-[25000] bg-black/70 flex items-center justify-center p-6">
+        <div class="glass-panel rounded-3xl p-6 md:p-10 w-full max-w-xl border border-white/10 text-center">
+            <div class="text-2xl md:text-3xl font-black uppercase tracking-widest">Sterowanie padem</div>
+            <div class="text-sm text-gray-300 mt-2">Podłącz pada Xbox i naciśnij</div>
+            <div class="mt-4 flex items-center justify-center gap-3">
+                <span class="gp-btn gp-a">A</span>
+                <span class="text-gray-200 font-black uppercase tracking-widest">Start</span>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-5 uppercase font-bold tracking-widest">
+                D-Pad / lewy drążek: nawigacja • A: wybierz • B: wstecz • Menu: sidebar
+            </div>
+        </div>
+    </div>
+    <div id="gamepad-hud" class="hidden" aria-live="polite">
+        <div class="gp-hud-row">
+            <div class="gp-hud-pill" id="gp-status-pill">
+                <span class="gp-dot" id="gp-dot"></span>
+                <span id="gp-status-text">Pad: —</span>
+            </div>
+            <div class="gp-hud-pill" id="gp-help-pill">
+                <span class="gp-btn gp-a">A</span><span class="gp-hud-sep">Wybierz</span>
+                <span class="gp-btn gp-b">B</span><span class="gp-hud-sep">Wstecz</span>
+                <span class="gp-btn gp-x">X</span><span class="gp-hud-sep">Akcja</span>
+                <span class="gp-btn gp-menu">MENU</span><span class="gp-hud-sep">Menu</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAMEPAD CONTROLS (in-app help) -->
+    <div id="controls-modal" class="hidden fixed inset-0 z-[20010] bg-black/90 flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl p-6 md:p-8 w-full max-w-4xl border border-white/10 shadow-2xl">
+            <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                <div>
+                    <div class="text-2xl md:text-3xl font-black uppercase tracking-widest">Sterowanie padem</div>
+                    <div class="text-xs md:text-sm text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">Xbox / TV</div>
+                </div>
+                <button id="controls-close-btn" aria-label="Zamknij" onclick="window.GamepadManager && window.GamepadManager.closeControls ? window.GamepadManager.closeControls() : document.getElementById('controls-modal').classList.add('hidden');" class="action-icon-btn bg-gray-800 hover:bg-gray-700 text-gray-200 text-xl font-bold">
+                    &times;
+                </button>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mt-5">
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <div class="text-xs text-gray-400 font-black uppercase tracking-[0.22em] mb-3">Nawigacja</div>
+                    <div class="space-y-2 text-sm md:text-base text-gray-200">
+                        <div class="flex items-center justify-between gap-3"><span>D-Pad / lewy drążek</span><span class="text-gray-400">Przesuń fokus</span></div>
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-a">A</span></span><span class="text-gray-400">Wybierz / klik</span></div>
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-b">B</span></span><span class="text-gray-400">Wstecz / zamknij</span></div>
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-menu">MENU</span></span><span class="text-gray-400">Sidebar</span></div>
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-view">VIEW</span></span><span class="text-gray-400">Pokaż/ukryj HUD</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <div class="text-xs text-gray-400 font-black uppercase tracking-[0.22em] mb-3">Skróty</div>
+                    <div class="space-y-2 text-sm md:text-base text-gray-200">
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-lb">LB</span> / <span class="gp-btn gp-rb">RB</span></span><span class="text-gray-400">Przewijanie stronami / zakładki</span></div>
+                        <div class="flex items-center justify-between gap-3"><span><span class="gp-btn gp-x">X</span></span><span class="text-gray-400">Akcja kontekstowa</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 bg-white/5 border border-white/10 rounded-2xl p-4">
+                <div class="text-xs text-gray-400 font-black uppercase tracking-[0.22em] mb-2">Losowanie (2 pady)</div>
+                <div class="text-sm md:text-base text-gray-200 leading-relaxed">
+                    <span class="gp-p">P1</span> steruje <span class="text-blue-300 font-black">Drużyną 1</span>, a <span class="gp-p">P2</span> steruje <span class="text-red-300 font-black">Drużyną 2</span>.
+                    <span class="ml-2"><span class="gp-btn gp-a">A</span> Zostaw</span>
+                    <span class="ml-2"><span class="gp-btn gp-x">X</span> Reroll</span>
+                    <span class="ml-2"><span class="gp-btn gp-y">Y</span> Ręczny wybór</span>
+                </div>
+            </div>
+
+            <div class="text-[11px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.22em] mt-4">
+                Tip: jeśli coś "zniknęło", naciśnij <span class="gp-btn gp-b">B</span> kilka razy.
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js?v=20260110-07"></script>
+<!-- UNIFIED PLAYER PICKER MODAL -->
+<div id="universal-picker-modal" class="hidden fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-700 p-6 rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl animate-pop">
+        <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+            <h2 id="picker-title" class="text-xl font-black text-white uppercase tracking-widest">Wybierz Gracza</h2>
+            <div class="flex gap-2">
+                 <button id="picker-add-btn" class="action-icon-btn bg-green-600 hover:bg-green-500 text-white" title="Dodaj nowego gracza">
+                    <span class="text-xl font-bold">+</span>
+                 </button>
+                 <button id="picker-delete-mode-btn" class="action-icon-btn bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 border border-gray-700" title="Tryb usuwania">
+                    <span>🗑</span>
+                 </button>
+                 <button onclick="document.getElementById('universal-picker-modal').classList.add('hidden');" class="action-icon-btn bg-gray-800 hover:bg-gray-700 text-gray-400 text-xl font-bold ml-2">
+                    &times;
+                 </button>
+            </div>
+        </div>
+
+        <!-- Add Player Input (Hidden by default) -->
+        <div id="picker-add-row" class="hidden mb-4 bg-gray-800 p-3 rounded-lg border border-green-500/30">
+            <div class="flex gap-2">
+                <input type="text" id="picker-new-name" placeholder="Nazwa nowego gracza..." class="bg-gray-900 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5 focus:ring-green-500 focus:border-green-500">
+                <button id="picker-confirm-add" class="bg-green-600 text-white px-4 rounded-lg font-bold text-sm hover:bg-green-500">OK</button>
+            </div>
+        </div>
+<p id="picker-info-text" class="text-[10px] text-gray-500 uppercase font-bold mb-2 px-1"></p>
+        <div id="picker-grid-container" class="picker-grid overflow-y-auto flex-grow pr-2">
+            <!-- Tiles injected via JS -->
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
+             <button id="picker-done-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-bold text-sm uppercase">Gotowe</button>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="delete-confirm-modal" class="hidden fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-4">
+    <div class="bg-gray-800 border border-red-500/50 p-6 rounded-2xl w-full max-w-sm text-center animate-pop">
+        <h3 class="text-xl font-bold text-red-500 mb-2">Usuwanie Gracza</h3>
+        <p class="text-white mb-4">Czy chcesz usunąć gracza <span id="del-player-name" class="font-bold text-yellow-400"></span>?</p>
+        
+        <div class="flex flex-col gap-3">
+            <button id="del-btn-keep-stats" class="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-lg text-sm font-bold border border-gray-500">
+                Usuń z listy, ale ZACHOWAJ statystyki
+                <span class="block text-[10px] text-gray-400 font-normal mt-1">Gracz zniknie z wyboru, ale historia meczów pozostanie.</span>
+            </button>
+            <button id="del-btn-wipe-stats" class="bg-red-900/50 hover:bg-red-800 text-red-200 p-3 rounded-lg text-sm font-bold border border-red-700">
+                Usuń gracza ORAZ jego statystyki
+                <span class="block text-[10px] text-red-300/70 font-normal mt-1">Wymazuje indywidualne rekordy (duety zostaną).</span>
+            </button>
+            <button onclick="document.getElementById('delete-confirm-modal').classList.add('hidden');" class="text-gray-500 hover:text-white text-xs underline mt-2">Anuluj</button>
+        </div>
+    </div>
+</div>
+<!-- SIDEBAR -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-[15000] hidden opacity-0 transition-opacity duration-300" onclick="window.Sidebar.close()"></div>
+<div id="sidebar" class="fixed left-0 top-0 h-full w-72 bg-gray-900 z-[16000] border-r border-white/10 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b border-white/10 sidebar-header">
+        <div class="flex items-center justify-between">
+            <div class="truncate">
+                <div class="text-sm font-black uppercase text-white truncate w-52" id="sb-user-email">manager@ea.fc</div>
+                <div class="text-[10px] font-bold uppercase" id="sb-user-status">Zweryfikowany</div>
+            </div>
+            <button id="mute-sound-btn" class="w-9 h-9 rounded-lg bg-gray-800/70 border border-white/10 text-white flex items-center justify-center shadow-sm hover:bg-gray-700 transition">🔈</button>
+        </div>
+    </div>
+
+    <div class="flex-grow p-4 space-y-2 overflow-y-auto">
+        <button onclick="window.Sidebar.close(); Stats.init(); document.getElementById('stats-modal').classList.remove('hidden');" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 font-bold text-sm transition-colors">
+            <span>📊</span> Statystyki Ogólne
+        </button>
+        <button id="toggle-tv-layout-btn" onclick="window.GamepadManager && window.GamepadManager.toggleTvLayout ? window.GamepadManager.toggleTvLayout() : null" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 font-bold text-sm transition-colors">
+            <span>📺</span> Tryb TV (większy interfejs)
+        </button>
+        <button id="open-controls-modal-btn" onclick="window.Sidebar.close(); window.GamepadManager && window.GamepadManager.openControls ? window.GamepadManager.openControls() : document.getElementById('controls-modal').classList.remove('hidden');" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 font-bold text-sm transition-colors">
+            <span>🎮</span> Sterowanie padem
+        </button>
+        <button onclick="window.Sidebar.openProfile()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 font-bold text-sm transition-colors">
+            <span>👤</span> Profil Managera
+        </button>
+        <button onclick="window.DataManager.resetSession(); window.Sidebar.close();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-blue-400 font-bold text-sm transition-colors">
+            <span>🔄</span> Nowa Sesja (Reset)
+        </button>
+    </div>
+
+    <div class="p-4 border-t border-white/10">
+        <button onclick="window.AuthManager.logout()" class="w-full p-3 rounded-xl bg-red-900/20 text-red-400 font-bold text-xs uppercase tracking-widest hover:bg-red-900/40 transition-all">
+            Wyloguj się
+        </button>
+    </div>
+</div>
+</body>
+</html>

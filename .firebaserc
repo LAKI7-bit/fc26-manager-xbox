@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "xbox": "fc26-manager-xbox",
+    "default": "fc26-manager-xbox"
+  },
+  "targets": {
+    "fc26-manager-xbox": {
+      "hosting": {
+        "xbox": [
+          "fc26-manager-xbox"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
