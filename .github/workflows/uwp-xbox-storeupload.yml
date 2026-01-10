@@ -224,14 +224,32 @@ jobs:
           $out = Join-Path $PWD "artifacts"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-          $uploads = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload
-          if (-not $uploads) {
-            Write-Error "No .appxupload/.msixupload produced. Check build logs."
+          # Look for a broad set of possible package outputs and AppPackages folders
+          $patterns = @('*.appxupload','*.msixupload','*.appxbundleupload','*.appxbundle','*.appx','*.msix')
+          $found = @()
+          foreach ($p in $patterns) {
+            $found += Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include $p
           }
 
-          $uploads | ForEach-Object {
-            Copy-Item $_.FullName -Destination $out -Force
-            Write-Host "Collected: $($_.FullName)"
+          # Also collect any AppPackages directories (Visual Studio output)
+          $appPkgDirs = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Directory | Where-Object { $_.Name -ieq 'AppPackages' }
+          foreach ($d in $appPkgDirs) {
+            $found += Get-ChildItem -Path $d.FullName -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in '.appxupload','.msixupload','.appxbundle','.appx','.msix' }
+            # copy entire folder for inspection
+            $dest = Join-Path $out $d.FullName.Replace((Join-Path $PWD 'xbox-uwp-wrapper') + '\','')
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+            Copy-Item -Path (Join-Path $d.FullName '*') -Destination $dest -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "Collected AppPackages folder: $($d.FullName) -> $dest"
+          }
+
+          if ($found) {
+            $found | Sort-Object FullName -Unique | ForEach-Object {
+              $target = Join-Path $out $_.Name
+              Copy-Item $_.FullName -Destination $target -Force
+              Write-Host "Collected package: $($_.FullName) -> $target"
+            }
+          } else {
+            Write-Error "No package files found (searched for: $($patterns -join ', ')). Check msbuild_publish.log in the job log for details."
           }
 
       - name: Upload artifact
