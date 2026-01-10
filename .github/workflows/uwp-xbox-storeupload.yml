@@ -186,6 +186,7 @@ jobs:
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
 
           # Try publishing the solution first (different restore/publish flow on runner)
+          $pubLog = Join-Path $PWD "msbuild_publish.log"
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox.sln" `
             /t:Publish `
             /p:Configuration=Release `
@@ -198,7 +199,23 @@ jobs:
             /p:PackageCertificateKeyFile="$pfxPath" `
             /p:PackageCertificatePassword="$pfxPassword" `
             /p:GenerateAppxPackageOnBuild=true `
-            /m
+            /m | Tee-Object $pubLog
+
+          $msExit = $LASTEXITCODE
+          Write-Host "msbuild exit code: $msExit"
+          Write-Host "---- msbuild_publish.log (tail) ----"
+          Get-Content $pubLog -Tail 200 | ForEach-Object { Write-Host $_ }
+
+          Write-Host "---- Searching for package files under project folders ----"
+          $candidates = Get-ChildItem -Path "xbox-uwp-wrapper" -Recurse -ErrorAction SilentlyContinue -Include *.appxupload,*.msixupload,*.appx,*.msix
+          if ($candidates) {
+            $candidates | ForEach-Object { Write-Host "Found package: $($_.FullName)" }
+          } else {
+            Write-Host "No package files found under xbox-uwp-wrapper. Listing common output folders:"
+            Get-ChildItem -Path "xbox-uwp-wrapper/FC26ManagerXbox/bin" -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200 | ForEach-Object { Write-Host $_.FullName }
+          }
+
+          if ($msExit -ne 0) { throw "msbuild publish failed with exit code $msExit; see msbuild_publish.log" }
 
       - name: Collect artifacts
         shell: pwsh
