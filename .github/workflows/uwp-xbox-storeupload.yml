@@ -217,6 +217,27 @@ jobs:
 
           if ($msExit -ne 0) { throw "msbuild publish failed with exit code $msExit; see msbuild_publish.log" }
 
+          # If Publish didn't produce packages, run CreateAppPackage on the project (more explicit packaging target)
+          Write-Host "Attempting CreateAppPackage on project as a fallback..."
+          $capLog = Join-Path $PWD "msbuild_createapppkg.log"
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
+            /t:CreateAppPackage `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:AppxBundle=Always `
+            /p:AppxBundlePlatforms=x64 `
+            /p:AppxPackageSigningEnabled=true `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:RuntimeIdentifiers=win10 `
+            /p:PackageCertificateKeyFile="$pfxPath" `
+            /p:PackageCertificatePassword="$pfxPassword" `
+            /p:GenerateAppxPackageOnBuild=true `
+            /m | Tee-Object $capLog
+
+          $capExit = $LASTEXITCODE
+          Write-Host "CreateAppPackage exit code: $capExit"
+          Get-Content $capLog -Tail 200 | ForEach-Object { Write-Host $_ }
+          if ($capExit -ne 0) { Write-Error "CreateAppPackage failed (exit $capExit). Check logs above." }
       - name: Collect artifacts
         shell: pwsh
         run: |
