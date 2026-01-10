@@ -1,4 +1,6 @@
-name: Build Xbox UWP (Store Upload)
+name: UWP Xbox Store Upload
+
+run-name: Build UWP Store upload (x64)
 
 on:
   workflow_dispatch:
