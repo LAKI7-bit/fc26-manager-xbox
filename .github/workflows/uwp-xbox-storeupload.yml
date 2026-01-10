@@ -184,6 +184,16 @@ jobs:
 
           # Restore NuGet/packages then Publish to generate StoreUpload package (.appxupload/.msixupload)
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" /t:Restore /p:Configuration=Release /p:Platform=x64
+
+          # Diagnostic: dump project.assets.json so we can see which dependency requires .NET Framework
+          $assets = Join-Path "$PWD" "xbox-uwp-wrapper/FC26ManagerXbox/obj/project.assets.json"
+          if (Test-Path $assets) {
+            Write-Host "---- project.assets.json (tail 200 lines) ----"
+            Get-Content $assets -Tail 200 | ForEach-Object { Write-Host $_ }
+            Write-Host "---- end project.assets.json ----"
+          } else {
+            Write-Host "project.assets.json not found at: $assets"
+          }
           # Try publishing the project first (project-level Publish may produce packages)
           $projPubLog = Join-Path $PWD "msbuild_project_publish.log"
           & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
