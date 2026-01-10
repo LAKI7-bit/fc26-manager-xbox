@@ -204,12 +204,14 @@ jobs:
 
           $manifest = Join-Path $binDir "AppxManifest.xml"
           if (-not (Test-Path $manifest)) {
-            # Copy manifest from source if not in bin
+            # Copy manifest from source and replace token
             $srcManifest = "xbox-uwp-wrapper/FC26ManagerXbox/Package.appxmanifest"
             if (Test-Path $srcManifest) {
-              Copy-Item $srcManifest -Destination $manifest
+              $content = Get-Content $srcManifest -Raw
+              $content = $content -replace '\$targetnametoken\$', 'FC26ManagerXbox'
+              $content | Out-File -FilePath $manifest -Encoding UTF8
             } else {
-              throw "AppxManifest.xml not found in build output or source"
+              throw "AppxManifest.xml not found in source"
             }
           }
 
