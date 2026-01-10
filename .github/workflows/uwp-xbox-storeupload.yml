@@ -14,6 +14,48 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Ensure UWP build tooling is installed (WindowsXaml/Appx targets)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Test-UwpTooling {
+            $xaml = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.Windows.UI.Xaml.CSharp.targets' | Select-Object -First 1
+            $appx = Get-ChildItem -Path "${env:ProgramFiles(x86)}\MSBuild" -Recurse -ErrorAction SilentlyContinue -Filter 'Microsoft.AppXPackage.Targets' | Select-Object -First 1
+            return [pscustomobject]@{ Xaml=$xaml; Appx=$appx }
+          }
+
+          $found = Test-UwpTooling
+          if ($found.Xaml -and $found.Appx) {
+            Write-Host "OK: UWP tooling already present."
+            Write-Host "  WindowsXaml: $($found.Xaml.FullName)"
+            Write-Host "  AppxPackage: $($found.Appx.FullName)"
+            exit 0
+          }
+
+          Write-Host "UWP tooling missing. Installing Visual Studio UWP workload..."
+
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (!(Test-Path $vswhere)) { throw "vswhere.exe not found: $vswhere" }
+
+          $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installPath) { throw "No Visual Studio installation found on runner" }
+          Write-Host "VS installPath: $installPath"
+
+          $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vs_installer.exe'
+          if (!(Test-Path $installer)) { throw "vs_installer.exe not found: $installer" }
+
+          # Add UWP workload + a compatible Windows SDK. includeOptional helps pull XAML/Appx targets.
+          & $installer modify --installPath "$installPath" --add Microsoft.VisualStudio.Workload.Universal --includeRecommended --includeOptional --passive --norestart --wait
+
+          $found2 = Test-UwpTooling
+          if (-not ($found2.Xaml -and $found2.Appx)) {
+            Write-Error "Still missing UWP tooling after install. WindowsXaml/Appx targets not found."
+          }
+          Write-Host "OK: Installed UWP tooling."
+          Write-Host "  WindowsXaml: $($found2.Xaml.FullName)"
+          Write-Host "  AppxPackage: $($found2.Appx.FullName)"
+
       - name: Verify UWP build tooling exists (WindowsXaml/Appx targets)
         shell: pwsh
         run: |
