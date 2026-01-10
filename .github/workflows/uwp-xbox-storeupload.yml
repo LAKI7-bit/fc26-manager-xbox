@@ -30,11 +30,11 @@ jobs:
             return $null
           }
 
-          function Test-UwpTooling([string]$vsInstallPath) {
-            $roots = @(
-              "${env:ProgramFiles(x86)}\MSBuild",
-              (if ($vsInstallPath) { Join-Path $vsInstallPath 'MSBuild' } else { $null })
-            )
+          function Test-UwpTooling([string]$vsInstallPath = $null) {
+            $roots = @("${env:ProgramFiles(x86)}\MSBuild")
+            if ($vsInstallPath) {
+              $roots += (Join-Path $vsInstallPath 'MSBuild')
+            }
 
             $xaml = Find-FirstFile -roots $roots -fileName 'Microsoft.Windows.UI.Xaml.CSharp.targets'
             $appx = Find-FirstFile -roots $roots -fileName 'Microsoft.AppXPackage.Targets'
@@ -96,10 +96,10 @@ jobs:
           $installPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
           Write-Host "VS installPath: $installPath"
 
-          $roots = @(
-            "${env:ProgramFiles(x86)}\MSBuild",
-            (if ($installPath) { Join-Path $installPath 'MSBuild' } else { $null })
-          )
+          $roots = @("${env:ProgramFiles(x86)}\MSBuild")
+          if ($installPath) {
+            $roots += (Join-Path $installPath 'MSBuild')
+          }
           Write-Host "Search roots: $($roots -join '; ')"
 
           $xamlTargets = $null
