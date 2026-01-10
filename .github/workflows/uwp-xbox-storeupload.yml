@@ -153,6 +153,22 @@ jobs:
 
           "PFX_PATH=$pfxPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      - name: Sanity check project config exists (Release|x64)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $csproj = "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj"
+          if (-not (Test-Path $csproj)) { throw "Missing csproj at $csproj" }
+
+          $hits = Select-String -Path $csproj -SimpleMatch "'$(Configuration)|$(Platform)'=='Release|x64'" -ErrorAction SilentlyContinue
+          if (-not $hits) {
+            Write-Host "--- csproj head ---"
+            Get-Content $csproj -TotalCount 80
+            throw "Repo does not contain Release|x64 config in csproj (did you push the latest csproj change?)"
+          }
+          Write-Host "OK: Release|x64 config found in csproj."
+
       - name: Build Store upload package (x64)
         shell: pwsh
         run: |
@@ -164,11 +180,13 @@ jobs:
 
           $pfxPassword = "${{ secrets.PFX_PASSWORD }}"
 
-          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox/FC26ManagerXbox.csproj" `
+          & $msbuild "xbox-uwp-wrapper/FC26ManagerXbox.sln" `
             /t:Build `
             /p:Configuration=Release `
             /p:Platform=x64 `
             /p:VisualStudioVersion=17.0 `
+            /p:OutputPath=bin\\x64\\Release\\ `
+            /p:IntermediateOutputPath=obj\\x64\\Release\\ `
             /p:GenerateAppxPackageOnBuild=true `
             /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxBundle=Always `
