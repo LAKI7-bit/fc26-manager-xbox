@@ -215,6 +215,17 @@ jobs:
             }
           }
 
+          # Ensure Assets are present in the build output so MakeAppx includes them
+          $srcAssets = Join-Path $PWD "xbox-uwp-wrapper/FC26ManagerXbox/Assets"
+          $dstAssets = Join-Path $binDir "Assets"
+          if (Test-Path $srcAssets) {
+            if (Test-Path $dstAssets) { Remove-Item -Recurse -Force $dstAssets }
+            Copy-Item -Path $srcAssets -Destination $binDir -Recurse -Force
+            Write-Host "Copied Assets to build output: $dstAssets"
+          } else {
+            Write-Host "Warning: Assets folder not found in repo: $srcAssets"
+          }
+
           $appxPath = Join-Path $PWD "FC26ManagerXbox.appx"
           & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\MakeAppx.exe" pack /d "$binDir" /p "$appxPath" /l
           if ($LASTEXITCODE -ne 0) { throw "MakeAppx pack failed" }
