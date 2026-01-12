@@ -5,7 +5,7 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
 
-  <Identity Name="LAKIseven.FC26MANAGER" Publisher="CN=712788B8-43CE-4166-8202-F444B4BF7C49" Version="1.0.0.0" />
+  <Identity Name="LAKIseven.FC26MANAGER" Publisher="CN=712788B8-43CE-4166-8202-F444B4BF7C49" Version="1.0.1.0" />
 
   <Properties>
     <DisplayName>FC26 MANAGER</DisplayName>
@@ -42,3 +42,4 @@
     <Capability Name="internetClient" />
   </Capabilities>
 </Package>
+
